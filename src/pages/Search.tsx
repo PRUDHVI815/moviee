@@ -1,32 +1,59 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import React, { useEffect } from 'react'; 
+import { useDispatch, useSelector } from 'react-redux'; 
+import { useLocation } from 'react-router-dom';
+import { Container, Typography, Grid } from '@mui/material'; 
+import { searchMoviesAsync } from '../redux/movieSlice';
+import MovieCard from '../components/MovieCard'; 
+import Loading from '../components/Loading'; 
+import { AppDispatch, RootState } from '../redux/store'; 
 
-interface Movie {
-  id: number;
-  title: string;
-  poster_path: string;
-  vote_average: number | null;
+
+function useQuery() {
+  return new URLSearchParams(useLocation().search); 
 }
 
-interface MoviesState {
-  watchlist: Movie[];
-}
+const Search: React.FC = () => {
+  const query = useQuery();
+  const searchQuery = query.get('q'); 
+  const dispatch = useDispatch<AppDispatch>(); 
+  const { searchResults, loading } = useSelector((state: RootState) => state.movies);
 
-const initialState: MoviesState = {
-  watchlist: [],
+  
+  useEffect(() => {
+    if (searchQuery) {
+      dispatch(searchMoviesAsync(searchQuery)); 
+    }
+  }, [dispatch, searchQuery]); 
+
+  
+  if (loading) {
+    return (
+      <Container sx={{ py: 4 } as any}>
+        <Loading message="Searching movies..." />
+      </Container>
+    ); 
+  }
+
+  return (
+    <Container sx={{ py: 4 } as any}>
+      <Typography variant="h4" gutterBottom>
+        Search Results for "{searchQuery}"
+      </Typography>
+      {searchResults.length === 0 ? (
+        <Typography variant="body1" color="text.secondary">
+          No movies found. Please try a different search term.
+        </Typography>
+      ) : (
+        <Grid container spacing={3}>
+          {searchResults.map((movie) => (
+            <Grid item xs={12} sm={6} md={4} lg={3} key={movie.id}>
+              <MovieCard movie={movie} />
+            </Grid>
+          ))}
+        </Grid>
+      )}
+    </Container>
+  );
 };
 
-const movieSlice = createSlice({
-  name: 'movies',
-  initialState,
-  reducers: {
-    addToWatchlist: (state, action: PayloadAction<Movie>) => {
-      state.watchlist.push(action.payload);
-    },
-    removeFromWatchlist: (state, action: PayloadAction<Movie>) => {
-      state.watchlist = state.watchlist.filter(movie => movie.id !== action.payload.id);
-    },
-  },
-});
-
-export const { addToWatchlist, removeFromWatchlist } = movieSlice.actions;
-export default movieSlice.reducer;
+export default Search; 
